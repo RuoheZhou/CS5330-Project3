@@ -4,7 +4,7 @@ int main(int argc, char *argv[]) {
     cv::VideoCapture *capdev;
 
     // Open the video device
-    capdev = new cv::VideoCapture(1); // Change the parameter to the appropriate device index
+    capdev = new cv::VideoCapture(0); // Change the parameter to the appropriate device index
     if (!capdev->isOpened()) {
         printf("Unable to open video device\n");
         return (-1);
