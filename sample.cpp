@@ -16,7 +16,7 @@ int sobelX3x3(cv::Mat &src, cv::Mat &dst) {
 
     return 0;  
 }
-
+//Sample Comment
 int sobelY3x3(cv::Mat &src, cv::Mat &dst) {
     dst.create(src.size(), CV_16SC3);
 
