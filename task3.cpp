@@ -2,7 +2,7 @@
 #include "filters.hpp"
 
 
-int thresholding(cv::Mat & src, cv::Mat & dst, int threshold)
+int thresholding(cv::Mat& src, cv::Mat& dst, cv::Mat& binary_mask ,int threshold)
 {
     int num_rows = src.rows;
     int num_cols = src.cols;
@@ -13,7 +13,8 @@ int thresholding(cv::Mat & src, cv::Mat & dst, int threshold)
     dilation(grayscale_img,dilated_img,5,8);
     erosion(dilated_img,eroded_img,5,4);
     
-    cv::Mat temp = cv::Mat::zeros(src.size(), CV_8UC3); // Create a grayscale image
+    cv::Mat temp = cv::Mat::zeros(src.size(), CV_8UC3);
+    cv::Mat temp_binary = cv::Mat::zeros(src.rows,src.cols, CV_8U);
 
     for (int i = 0; i < num_rows; i++)
     {
@@ -22,13 +23,16 @@ int thresholding(cv::Mat & src, cv::Mat & dst, int threshold)
             uchar pixel_value = grayscale_img.at<uchar>(i, j);
             if (pixel_value > threshold) {
                 temp.at<cv::Vec3b>(i, j) = cv::Vec3b(0, 0, 0);
+                temp_binary.at<uchar>(i, j) = 0;
             }
             else {
                 temp.at<cv::Vec3b>(i, j) = src.at<cv::Vec3b>(i, j);
+                temp_binary.at<uchar>(i, j) = 255;
             }
         }
     }
     dst = temp.clone();
+    binary_mask = temp_binary.clone();
     return 0;
 }
 
@@ -172,7 +176,7 @@ int main(int argc, char *argv[]) {
     cv::namedWindow("Original Video", 1); // Window for original video
     cv::namedWindow("Thresholded Video", 1); // Window for thresholded video
 
-    cv::Mat frame,thresholded_frame,dilated_img;
+    cv::Mat frame,thresholded_frame,dilated_img,binary_mask;
 
     for (;;) {
         *capdev >> frame; // Get a new frame from the camera
@@ -185,10 +189,10 @@ int main(int argc, char *argv[]) {
         // Preprocess the frame (optional)
 
         // Thresholding
-        thresholding(frame,thresholded_frame,120);
+        thresholding(frame,thresholded_frame,binary_mask,120);
         
         cv::imshow("Original Video", frame);
-        cv::imshow("Thresholded Video", thresholded_frame);
+        cv::imshow("Thresholded Video", binary_mask);
         // cv::imshow("Cleaned Thresholded Video", frame_cleaned);
 
         // // Create a color map for the regions
