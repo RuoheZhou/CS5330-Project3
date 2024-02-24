@@ -1,57 +1,75 @@
 #include <opencv2/opencv.hpp>
+#include <iostream>
 
-int main(int argc, char *argv[]) {
-    cv::VideoCapture *capdev;
+int thresholding(cv::Mat & src, cv::Mat & dst, int threshold)
+{
+    int num_rows = src.rows;
+    int num_cols = src.cols;
+    cv::Mat grayscale_img;
+    cv::cvtColor(src, grayscale_img, cv::COLOR_BGR2GRAY);
+    cv::GaussianBlur(grayscale_img, grayscale_img, cv::Size(5, 5), 0);
+ 
+    cv::Mat temp = cv::Mat::zeros(src.size(), CV_8UC3); // Create a grayscale image
+ 
+    for (int i = 0; i < num_rows; i++)
+    {
+        for (int j = 0; j < num_cols; j++)
+        {
+            uchar pixel_value = grayscale_img.at<uchar>(i, j);
+            if (pixel_value > threshold) {
+                temp.at<cv::Vec3b>(i, j) = cv::Vec3b(0, 0, 0);
+            }
+            else {
+                temp.at<cv::Vec3b>(i, j) = src.at<cv::Vec3b>(i, j);
+            }
+        }
+    }
+    dst = temp.clone();
+    return 0;
+}
 
-    // Open the video device
-    capdev = new cv::VideoCapture(1); // Change the parameter to the appropriate device index
-    if (!capdev->isOpened()) {
-        printf("Unable to open video device\n");
-        return (-1);
+int main() {
+    cv::VideoCapture cap(1); // Open default camera
+    if (!cap.isOpened()) {
+        std::cerr << "Error: Unable to open video device" << std::endl;
+        return -1;
     }
 
-    cv::namedWindow("Original Video", 1); // Window for original video
-    cv::namedWindow("Thresholded Video", 1); // Window for thresholded video
-    cv::namedWindow("Cleaned Thresholded Video", 1); // Window for cleaned thresholded video
+    cv::namedWindow("Original Video", cv::WINDOW_NORMAL);
+    cv::namedWindow("Background Removed", cv::WINDOW_NORMAL);
 
-    cv::Mat frame, frame_gray, frame_thresholded, frame_cleaned;
+    cv::Mat frame, background_removed;
 
     for (;;) {
-        *capdev >> frame; // Get a new frame from the camera
+        cap >> frame; // Capture frame
 
         if (frame.empty()) {
-            printf("Frame is empty\n");
+            std::cerr << "Error: Frame is empty" << std::endl;
             break;
         }
 
-        // Preprocess the frame (optional)
-        cv::cvtColor(frame, frame_gray, cv::COLOR_BGR2GRAY);
-        cv::GaussianBlur(frame_gray, frame_gray, cv::Size(5, 5), 0);
+        // Convert frame to grayscale
+        cv::Mat gray;
+        // cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
 
-        // Thresholding
-        cv::threshold(frame_gray, frame_thresholded, 100, 255, cv::THRESH_BINARY);
+        // // Apply GaussianBlur to smooth the image and reduce noise
+        // cv::GaussianBlur(gray, gray, cv::Size(5, 5), 0);
 
-        // Morphological filtering (cleaning up)
-        // we use the morphological closing operation (cv::MORPH_CLOSE) to 
-        // fill in small holes and smooth out irregularities in the binary image.
-        // We define a kernel (cv::Mat) to be used for the morphological operation. 
-        // Here, we use a rectangular kernel of size 5x5
+        cv::Mat thresholded;
+        cv::threshold(gray, thresholded, 100, 255, cv::THRESH_BINARY_INV);
+        
+        // Call the thresholding function
+        thresholding(frame, background_removed, 100);
 
-        cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(5, 5));
-        cv::morphologyEx(frame_thresholded, frame_cleaned, cv::MORPH_CLOSE, kernel);
-
-        // Display original, thresholded, and cleaned thresholded video
+        // Display original video and background-removed video
         cv::imshow("Original Video", frame);
-        cv::imshow("Thresholded Video", frame_thresholded);
-        cv::imshow("Cleaned Thresholded Video", frame_cleaned);
+        cv::imshow("Background Removed", background_removed);
 
-        // Check for key press
         char key = cv::waitKey(10);
         if (key == 'q') {
             break; // Quit if 'q' is pressed
         }
     }
 
-    delete capdev;
     return 0;
 }

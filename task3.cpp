@@ -1,76 +1,95 @@
 #include <opencv2/opencv.hpp>
+#include <iostream>
+#include <vector>
+#include <map>
 
-int main(int argc, char *argv[]) {
-    cv::VideoCapture *capdev;
+struct RegionInfo {
+    cv::Point2d centroid;
+    cv::Vec3b color;
+};
 
-    // Open the video device
-    capdev = new cv::VideoCapture(1); // Change the parameter to the appropriate device index
-    if (!capdev->isOpened()) {
-        printf("Unable to open video device\n");
-        return (-1);
+std::map<int, RegionInfo> prevRegions;
+
+cv::Vec3b getColorForRegion(cv::Point2d centroid) {
+    // If the region existed in the previous frame, try to use the same color
+    for (const auto& reg : prevRegions) {
+        cv::Point2d prevCentroid = reg.second.centroid;
+        double distance = cv::norm(centroid - prevCentroid);
+
+        if (distance < 50.0) { // Threshold for matching centroids (adjust as needed)
+            return reg.second.color;
+        }
     }
 
-    cv::namedWindow("Original Video", 1); // Window for original video
-    cv::namedWindow("Thresholded Video", 1); // Window for thresholded video
-    cv::namedWindow("Cleaned Thresholded Video", 1); // Window for cleaned thresholded video
-    cv::namedWindow("Regions", 1); // Window for regions found
+    // Otherwise, assign a new random color
+    return cv::Vec3b(rand() % 256, rand() % 256, rand() % 256);
+}
 
-    cv::Mat frame, frame_gray, frame_thresholded, frame_cleaned;
+void cleanAndSegment(cv::Mat &src, cv::Mat &dst, int minRegionSize) {
+    cv::Mat labels, stats, centroids;
+    int nLabels = cv::connectedComponentsWithStats(src, labels, stats, centroids, 8, CV_32S);
 
-    for (;;) {
-        *capdev >> frame; // Get a new frame from the camera
+    dst = cv::Mat::zeros(src.size(), CV_8UC3);
+    std::map<int, RegionInfo> currentRegions;
 
-        if (frame.empty()) {
-            printf("Frame is empty\n");
-            break;
-        }
+    for (int i = 1; i < nLabels; i++) {
+        int area = stats.at<int>(i, cv::CC_STAT_AREA);
+        cv::Point2d centroid(centroids.at<double>(i, 0), centroids.at<double>(i, 1));
 
-        // Preprocess the frame (optional)
-        cv::cvtColor(frame, frame_gray, cv::COLOR_BGR2GRAY);
-        cv::GaussianBlur(frame_gray, frame_gray, cv::Size(5, 5), 0);
+        if (area > minRegionSize) {
+            cv::Vec3b color = getColorForRegion(centroid);
+            currentRegions[i] = {centroid, color};
 
-        // Thresholding
-        cv::threshold(frame_gray, frame_thresholded, 100, 255, cv::THRESH_BINARY);
-
-        // Morphological filtering (cleaning up)
-        cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(5, 5));
-        cv::morphologyEx(frame_thresholded, frame_cleaned, cv::MORPH_CLOSE, kernel);
-
-        // Connected components analysis
-        cv::Mat labels, stats, centroids;
-        int num_regions = cv::connectedComponentsWithStats(frame_cleaned, labels, stats, centroids);
-
-        // Display original, thresholded, and cleaned thresholded video
-        cv::imshow("Original Video", frame);
-        cv::imshow("Thresholded Video", frame_thresholded);
-        cv::imshow("Cleaned Thresholded Video", frame_cleaned);
-
-        // Create a color map for the regions
-        cv::Mat region_map(frame_cleaned.size(), CV_8UC3, cv::Scalar(0, 0, 0));
-        std::vector<cv::Vec3b> colors;
-        for (int i = 0; i < num_regions; ++i) {
-            colors.push_back(cv::Vec3b(rand() % 256, rand() % 256, rand() % 256)); // Generate random colors
-        }
-
-        // Draw regions on the region map
-        for (int y = 0; y < labels.rows; ++y) {
-            for (int x = 0; x < labels.cols; ++x) {
-                int label = labels.at<int>(y, x);
-                if (label > 0) {
-                    region_map.at<cv::Vec3b>(y, x) = colors[label];
+            for (int y = 0; y < labels.rows; y++) {
+                for (int x = 0; x < labels.cols; x++) {
+                    if (labels.at<int>(y, x) == i) {
+                        dst.at<cv::Vec3b>(y, x) = color;
+                    }
                 }
             }
         }
-
-        cv::imshow("Regions", region_map);
-
-        // Check for key press
-        char key = cv::waitKey(10);
-        if (key == 'q') {
-            break; // Quit if 'q' is pressed
-        }
     }
 
-    delete capdev;
+    // Update previous regions for the next frame
+    prevRegions = std::move(currentRegions);
+}
+
+int thresholding(cv::Mat &src, cv::Mat &dst, int threshold) {
+    cv::Mat grayscale_img;
+    cv::cvtColor(src, grayscale_img, cv::COLOR_BGR2GRAY);
+    cv::GaussianBlur(grayscale_img, grayscale_img, cv::Size(5, 5), 0);
+    cv::threshold(grayscale_img, dst, threshold, 255, cv::THRESH_BINARY_INV);
+    return 0;
+}
+
+int main() {
+    cv::VideoCapture cap(0); // Adjust camera index as needed
+    if (!cap.isOpened()) {
+        std::cerr << "Error: Unable to open video device" << std::endl;
+        return -1;
+    }
+
+    cv::namedWindow("Original Video", cv::WINDOW_NORMAL);
+    cv::namedWindow("Segmented", cv::WINDOW_NORMAL);
+
+    cv::Mat frame, thresholded, segmented;
+
+    while (true) {
+        cap >> frame; // Capture frame
+        if (frame.empty()) break;
+
+        // Thresholding to separate object from background
+        thresholding(frame, thresholded, 100);
+
+        // Clean up the image and segment into regions, ignoring small regions
+        cleanAndSegment(thresholded, segmented, 500); // Adjust minRegionSize as needed
+
+        // Display the original and segmented video
+        cv::imshow("Original Video", frame);
+        cv::imshow("Segmented", segmented);
+
+        if (cv::waitKey(10) == 'q') break;
+    }
+
     return 0;
 }
