@@ -13,9 +13,7 @@ include_directories(${OpenCV_INCLUDE_DIRS})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 
 # Add the executable and link against OpenCV and Boost libraries
-add_executable(task1 task1.cpp)
-target_link_libraries(task1 ${OpenCV_LIBS})
-add_executable(task3 task3.cpp include/filters.hpp)
-add_executable(colormap colormap.cpp include/filters.hpp)
-target_link_libraries(task3 ${OpenCV_LIBS})
+add_executable(cleaned_mask task1_and_2.cpp include/filters.hpp filters.cpp)
+add_executable(colormap colormap.cpp include/filters.hpp filters.cpp)
+target_link_libraries(cleaned_mask ${OpenCV_LIBS})
 target_link_libraries(colormap ${OpenCV_LIBS})
