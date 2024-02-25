@@ -197,3 +197,32 @@ cv::Mat cleanAndSegment(cv::Mat &src, cv::Mat &dst, int minRegionSize, std::map<
     prevRegions = std::move(currentRegions);
     return labels;
 }
+
+cv::Moments computeFeatures(cv::Mat &src, const cv::Mat &labels, int label, const cv::Point2d &centroid, const cv::Vec3b &color) {
+    cv::Mat mask = cv::Mat::zeros(labels.size(), CV_8U);
+    for (int y = 0; y < labels.rows; ++y) {
+        for (int x = 0; x < labels.cols; ++x) {
+            if (labels.at<int>(y, x) == label) {
+                mask.at<uchar>(y, x) = 255;
+            }
+        }
+    }
+
+    cv::Moments m = cv::moments(mask, true);
+    double angle = 0.5 * std::atan2(2 * m.mu11, m.mu20 - m.mu02) * 180 / CV_PI;
+
+    std::vector<cv::Point> points;
+    cv::findNonZero(mask, points);
+    cv::RotatedRect rotRect = cv::minAreaRect(points);
+
+    cv::Point2f rectPoints[4];
+    rotRect.points(rectPoints);
+    for (int j = 0; j < 4; j++) {
+        cv::line(src, rectPoints[j], rectPoints[(j + 1) % 4], cv::Scalar(color), 2);
+    }
+
+    cv::Point center = rotRect.center;
+    cv::Point endpoint(center.x + cos(angle) * 100, center.y + sin(angle) * 100);
+    cv::line(src, center, endpoint, cv::Scalar(color), 2);
+    return m;
+}
