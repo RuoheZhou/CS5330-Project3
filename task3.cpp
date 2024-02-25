@@ -29,7 +29,7 @@ int main() {
         erosion(dilated,eroded,5,4);
 
         // Clean up the image and segment into regions, ignoring small regions
-        cleanAndSegment(eroded, segmented, 500, prevRegions); // Adjust minRegionSize as needed
+        segmentObjects(eroded, segmented, 500, prevRegions); // Adjust minRegionSize as needed
 
         // Display the original and segmented video
         cv::imshow("Original Video", frame);

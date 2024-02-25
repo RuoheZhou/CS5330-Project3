@@ -6,7 +6,7 @@
 #include <string>
 #include "filters.hpp"
 
-int append_image_data_csv(char *csv_file_name, std::string object_name, std::vector<double> &image_data, int reset_file)
+int append_image_data_csv(char *csv_file_name, std::string object_name, std::vector<float> &image_data, int reset_file)
 {
   char buffer[256];
   char mode[8];
@@ -47,7 +47,7 @@ int append_image_data_csv(char *csv_file_name, std::string object_name, std::vec
 }
 
 int main() {
-    cv::VideoCapture cap(0);
+    cv::VideoCapture cap("/home/ronak/Downloads/objects.mp4");
     if (!cap.isOpened()) {
         std::cerr << "Error: Unable to open video device" << std::endl;
         return -1;
@@ -59,12 +59,13 @@ int main() {
         while (true) {
             cap >> frame;
             if (frame.empty()) break;
+            cv::resize(frame, frame, cv::Size(600, 480));
 
             thresholding(frame, thresholded, 100);
             dilation(thresholded, dilated, 5, 8);
             erosion(dilated, eroded, 5, 4);
 
-            cv::Mat labels = cleanAndSegment(eroded, segmented, 500, prevRegions);
+            cv::Mat labels = segmentObjects(eroded, segmented, 500, prevRegions);
             int key = cv::waitKey(30);
             if (key == 'N' || key == 'n')
             {
@@ -74,17 +75,27 @@ int main() {
 
                 for (const auto &reg : prevRegions)
                 {
-                    cv::Moments m = computeFeatures(frame, labels, reg.first, reg.second.centroid, reg.second.color);
-                    std::vector<double> input_data = std::vector<double>{m.m00, m.m10, m.m01, m.m20, m.m11, m.m02, m.m30, m.m21, m.m12, m.m03};
-                    append_image_data_csv("../data/features.csv", obj_name, input_data, 0);
+                  cv::Moments m = computeFeatures(frame, labels, reg.first, reg.second.centroid, reg.second.color);
+
+                  double huMoments[7];
+                  cv::HuMoments(m, huMoments);
+
+                  std::vector<float> input_data(huMoments, huMoments + 7);
+                  append_image_data_csv("../data/features.csv", obj_name, input_data, 0);
                 }
-                std::cout<<"DATA SAVED"<<std::endl;
+                std::cout << "DATA SAVED" << std::endl;
             }
-            else{
+            else if(key == 'q')
+            {
+              cv::destroyAllWindows();
+              exit(0);
+            }
+            else
+            {
               for (const auto &reg : prevRegions)
-                {
-                    computeFeatures(frame, labels, reg.first, reg.second.centroid, reg.second.color);
-                }
+              {
+                computeFeatures(frame, labels, reg.first, reg.second.centroid, reg.second.color);
+              }
             }
             cv::imshow("Output", frame);
         }

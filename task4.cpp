@@ -25,7 +25,7 @@ int main() {
         dilation(thresholded, dilated, 5, 8);
         erosion(dilated, eroded, 5, 4);
 
-        cv::Mat labels = cleanAndSegment(eroded, segmented, 500, prevRegions);
+        cv::Mat labels = segmentObjects(eroded, segmented, 500, prevRegions);
 
             for (const auto& reg : prevRegions) {
                 computeFeatures(frame, labels, reg.first, reg.second.centroid, reg.second.color);

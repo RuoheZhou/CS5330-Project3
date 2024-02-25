@@ -7,57 +7,209 @@
 #include <sstream> 
 #include "filters.hpp"
 
-struct ObjectFeature {
-    std::string label;
-    std::vector<double> features;
-};
+int getstring(FILE *fp, char os[])
+{
+  int p = 0;
+  int eol = 0;
 
-std::vector<ObjectFeature> loadFeatureDatabase(const std::string& filename) {
-    std::vector<ObjectFeature> database;
-    std::ifstream file(filename);
-    std::string line;
-    std::getline(file, line); // Skip header
-
-    while (std::getline(file, line)) {
-        std::istringstream ss(line);
-        ObjectFeature obj;
-        std::getline(ss, obj.label, ','); // First entry is the label
-
-        std::string feature;
-        while (std::getline(ss, feature, ',')) {
-            obj.features.push_back(std::stod(feature));
-        }
-        database.push_back(obj);
+  for (;;)
+  {
+    char ch = fgetc(fp);
+    if (ch == ',')
+    {
+      break;
     }
-    return database;
+    else if (ch == '\n' || ch == EOF)
+    {
+      eol = 1;
+      break;
+    }
+    // printf("%c", ch ); // uncomment for debugging
+    os[p] = ch;
+    p++;
+  }
+  // printf("\n"); // uncomment for debugging
+  os[p] = '\0';
+
+  return (eol); // return true if eol
 }
 
-double euclideanDistance(const std::vector<double>& vec1, const std::vector<double>& vec2) {
-    double distance = 0.0;
-    for (size_t i = 0; i < vec1.size(); ++i) {
-        distance += std::pow(vec1[i] - vec2[i], 2);
+int getint(FILE *fp, int *v)
+{
+  char s[256];
+  int p = 0;
+  int eol = 0;
+
+  for (;;)
+  {
+    char ch = fgetc(fp);
+    if (ch == ',')
+    {
+      break;
     }
-    return std::sqrt(distance);
+    else if (ch == '\n' || ch == EOF)
+    {
+      eol = 1;
+      break;
+    }
+
+    s[p] = ch;
+    p++;
+  }
+  s[p] = '\0'; // terminator
+  *v = atoi(s);
+
+  return (eol); // return true if eol
 }
 
-std::string findBestMatchingLabel(const std::vector<double>& features, const std::vector<ObjectFeature>& database) {
-    double minDistance = std::numeric_limits<double>::max();
-    std::string bestLabel = "Unknown";
+/*
+  Utility function for reading one float value from a CSV file
 
-    for (const auto& obj : database) {
-        double distance = euclideanDistance(features, obj.features);
-        if (distance < minDistance) {
-            minDistance = distance;
-            bestLabel = obj.label;
-        }
+  The value is stored in the v parameter
+
+  The function returns true if it reaches the end of a line or the file
+ */
+int getfloat(FILE *fp, float *v)
+{
+  char s[256];
+  int p = 0;
+  int eol = 0;
+
+  for (;;)
+  {
+    char ch = fgetc(fp);
+    if (ch == ',')
+    {
+      break;
+    }
+    else if (ch == '\n' || ch == EOF)
+    {
+      eol = 1;
+      break;
     }
 
-    return bestLabel;
+    s[p] = ch;
+    p++;
+  }
+  s[p] = '\0'; // terminator
+  *v = atof(s);
+
+  return (eol); // return true if eol
+}
+
+
+int read_image_data_csv(char *filename, std::vector<char *> &filenames, std::vector<std::vector<float>> &data, int echo_file)
+{
+  FILE *fp;
+  float fval;
+  char img_file[256];
+
+  fp = fopen(filename, "r");
+  if (!fp)
+  {
+    printf("Unable to open feature file\n");
+    return (-1);
+  }
+
+  printf("Reading %s\n", filename);
+  for (;;)
+  {
+    std::vector<float> dvec;
+
+    // read the filename
+    if (getstring(fp, img_file))
+    {
+      break;
+    }
+
+    // read the whole feature file into memory
+    for (;;)
+    {
+      // get next feature
+      float eol = getfloat(fp, &fval);
+      dvec.push_back(fval);
+      if (eol)
+        break;
+    }
+
+    data.push_back(dvec);
+
+    char *fname = new char[strlen(img_file) + 1];
+    strcpy(fname, img_file);
+    filenames.push_back(fname);
+  }
+  fclose(fp);
+  printf("Finished reading CSV file\n");
+
+  if (echo_file)
+  {
+    for (int i = 0; i < data.size(); i++)
+    {
+      for (int j = 0; j < data[i].size(); j++)
+      {
+        printf("%.4f  ", data[i][j]);
+      }
+      printf("\n");
+    }
+    printf("\n");
+  }
+
+  return (0);
+}
+
+// Function to compare the feature vector of the target image with the feature vectors in the CSV file
+int compareFeatures(std::vector<float> targetVector, char* csvFileName)
+{
+  std::vector<char *> labels;
+  std::vector<std::vector<float>> data;
+  int echo = 0;
+  std::vector<std::pair<float, std::string>> image_ranks; // defining a vector pair (float,string)
+
+  // read the csv file
+  int result = read_image_data_csv(csvFileName, labels, data, echo);
+
+  if (result == 0)
+  {
+    for (int i = 0; i < data.size(); i++)
+    {
+      float temp = 0;
+      for (int j = 0; j < data[i].size(); j++)
+      {
+        // calculating SSD
+        float diff = data[i][j] - targetVector[j];
+        temp += diff * diff;
+      }
+      // taking square root
+      float dist = std::sqrt(temp);
+
+      std::string current_label = labels[i];
+      image_ranks.push_back(std::make_pair(dist, current_label));
+    }
+
+    // sorting the vector pair in ascending order of the float values
+    sort(image_ranks.begin(), image_ranks.end());
+
+    std::cout<<image_ranks[1].second<<std::endl;
+    std::cout<<image_ranks[2].second<<std::endl;
+    std::cout<<image_ranks[3].second<<std::endl;
+    // Free allocated memory in the filenames vector
+    for (char *fname : labels)
+    {
+      delete[] fname;
+    }
+  }
+
+  else
+  {
+    std::cerr << "Error reading CSV file.\n";
+  }
+  printf("Terminating second program\n");
+  return (0);
 }
 
 
 int main() {
-    cv::VideoCapture cap(0);
+    cv::VideoCapture cap("/home/ronak/Downloads/objects.mp4");
     if (!cap.isOpened()) {
         std::cerr << "Error: Unable to open video device" << std::endl;
         return -1;
@@ -66,31 +218,36 @@ int main() {
     cv::namedWindow("Segmented", cv::WINDOW_AUTOSIZE);
 
     // Load the feature database from the specified CSV file
-    std::vector<ObjectFeature> database = loadFeatureDatabase("../data/features.csv");
-
     cv::Mat frame, thresholded, segmented, eroded, dilated;
     std::map<int, RegionInfo> prevRegions;
 
     while (true) {
         cap >> frame;
         if (frame.empty()) break;
-
+        cv::resize(frame, frame, cv::Size(600, 480));
         thresholding(frame, thresholded, 100);
         dilation(thresholded, dilated, 5, 8);
         erosion(dilated, eroded, 5, 4);
-        cv::Mat labels = cleanAndSegment(eroded, segmented, 500, prevRegions);
+        cv::Mat labels = segmentObjects(eroded, segmented, 500, prevRegions);
 
-        char key = static_cast<char>(cv::waitKey(10));
-        if (key == 'N' || key == 'n') {
-            for (const auto& reg : prevRegions) {
+        char key = static_cast<char>(cv::waitKey(1));
+        if (key == 'N' || key == 'n')
+        {
+            for (const auto &reg : prevRegions)
+            {
                 cv::Moments m = cv::moments(labels == reg.first, true); // Recompute moments for this region
-                std::vector<double> features = {m.m00, m.m10, m.m01, m.m20, m.m11, m.m02, m.m30, m.m21, m.m12, m.m03};
+                double huMoments[7];
+                cv::HuMoments(m, huMoments);
 
-                std::string bestMatchLabel = findBestMatchingLabel(features, database);
-                std::cout << "Best Match: " << bestMatchLabel << std::endl;
+                std::vector<float> features(huMoments, huMoments + 7);
+
+                compareFeatures(features, "../data/features.csv");
             }
-        } else {
-            for (const auto& reg : prevRegions) {
+        }
+        else
+        {
+            for (const auto &reg : prevRegions)
+            {
                 computeFeatures(frame, labels, reg.first, reg.second.centroid, reg.second.color);
             }
         }

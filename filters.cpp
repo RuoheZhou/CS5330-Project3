@@ -168,7 +168,7 @@ cv::Vec3b getColorForRegion(cv::Point2d centroid, std::map<int, RegionInfo>& pre
     return cv::Vec3b(rand() % 256, rand() % 256, rand() % 256);
 }
 
-cv::Mat cleanAndSegment(cv::Mat &src, cv::Mat &dst, int minRegionSize, std::map<int, RegionInfo>& prevRegions) {
+cv::Mat segmentObjects(cv::Mat &src, cv::Mat &dst, int minRegionSize, std::map<int, RegionInfo>& prevRegions) {
 
     cv::Mat labels, stats, centroids;
     int nLabels = cv::connectedComponentsWithStats(src, labels, stats, centroids, 8, CV_32S);
@@ -209,7 +209,7 @@ cv::Moments computeFeatures(cv::Mat &src, const cv::Mat &labels, int label, cons
     }
 
     cv::Moments m = cv::moments(mask, true);
-    double angle = 0.5 * std::atan2(2 * m.mu11, m.mu20 - m.mu02) * 180 / CV_PI;
+    double angle = 0.5 * std::atan2(2 * m.mu11, m.mu20 - m.mu02);
 
     std::vector<cv::Point> points;
     cv::findNonZero(mask, points);
