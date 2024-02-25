@@ -6,7 +6,7 @@
 #include <string>
 #include "filters.hpp"
 
-int append_image_data_csv(char *csv_file_name, std::string object_name, std::vector<float> &image_data, int reset_file)
+int append_image_data_csv(char *csv_file_name, std::string object_name, std::vector<double> &image_data, int reset_file)
 {
   char buffer[256];
   char mode[8];
@@ -75,8 +75,8 @@ int main() {
                 for (const auto &reg : prevRegions)
                 {
                     cv::Moments m = computeFeatures(frame, labels, reg.first, reg.second.centroid, reg.second.color);
-                    std::vector<float> input_data = std::vector<float>{m.m00, m.m10, m.m01, m.m20, m.m11, m.m02, m.m30, m.m21, m.m12, m.m03};
-                    append_image_data_csv("data/features.csv", obj_name, input_data, 0);
+                    std::vector<double> input_data = std::vector<double>{m.m00, m.m10, m.m01, m.m20, m.m11, m.m02, m.m30, m.m21, m.m12, m.m03};
+                    append_image_data_csv("../data/features.csv", obj_name, input_data, 0);
                 }
                 std::cout<<"DATA SAVED"<<std::endl;
             }
