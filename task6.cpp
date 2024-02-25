@@ -97,8 +97,7 @@ int getfloat(FILE *fp, float *v)
   return (eol); // return true if eol
 }
 
-
-int read_image_data_csv(char *filename, std::vector<char *> &filenames, std::vector<std::vector<float>> &data, int echo_file)
+int read_image_data_csv(char *filename, std::vector<char *> &labels, std::vector<std::vector<float>> &data, int echo_file)
 {
   FILE *fp;
   float fval;
@@ -136,7 +135,7 @@ int read_image_data_csv(char *filename, std::vector<char *> &filenames, std::vec
 
     char *fname = new char[strlen(img_file) + 1];
     strcpy(fname, img_file);
-    filenames.push_back(fname);
+    labels.push_back(fname);
   }
   fclose(fp);
   printf("Finished reading CSV file\n");
@@ -157,6 +156,62 @@ int read_image_data_csv(char *filename, std::vector<char *> &filenames, std::vec
   return (0);
 }
 
+std::vector<std::pair<float, std::string>> calculate_scaled_euclidean_distances(const std::vector<char *>& labels, const std::vector<std::vector<float>>& known_data, const std::vector<float>& new_value) {
+    std::vector<std::pair<float, std::string>> scaled_distances;
+
+    for (size_t i = 0; i < labels.size(); ++i) {
+        const std::vector<float>& data_for_label = known_data[i];
+
+        float mean = 0;
+        float std_dev = 0;
+
+        for (float value : data_for_label) {
+            mean += value;
+        }
+        mean /= data_for_label.size();
+
+        for (float value : data_for_label) {
+            float diff = value - mean;
+            std_dev += diff * diff;
+        }
+        std_dev = sqrt(std_dev / data_for_label.size());
+
+        float scaled_diff = (new_value[i] - mean) / std_dev;
+
+        // float scaled_diff = (normalized_new_value - 0.0f) / std_dev;
+        float distance = sqrt(scaled_diff * scaled_diff);
+
+        scaled_distances.push_back(std::make_pair(distance, labels[i]));
+    }
+
+    return scaled_distances;
+}
+
+std::vector<std::pair<float, std::string>> calculate_euclidean_distances(const std::vector<char *> &labels, const std::vector<std::vector<float>> &known_data, const std::vector<float> &new_value)
+{
+    std::vector<std::pair<float, std::string>> distances;
+
+    for (size_t i = 0; i < labels.size(); ++i)
+    {
+        const std::vector<float> &data_for_label = known_data[i];
+        size_t num_features = data_for_label.size();
+        float temp = 0;
+
+        for (int j = 0; j < num_features; j++)
+        {
+            // calculating SSD
+            float diff = data_for_label[j] - new_value[j];
+            temp += diff * diff;
+        }
+        // taking square root
+        float distance = std::sqrt(temp);
+
+        distances.push_back(std::make_pair(distance, labels[i]));
+    }
+
+    return distances;
+}
+
 // Function to compare the feature vector of the target image with the feature vectors in the CSV file
 int compareFeatures(std::vector<float> targetVector, char* csvFileName)
 {
@@ -170,28 +225,14 @@ int compareFeatures(std::vector<float> targetVector, char* csvFileName)
 
   if (result == 0)
   {
-    for (int i = 0; i < data.size(); i++)
-    {
-      float temp = 0;
-      for (int j = 0; j < data[i].size(); j++)
-      {
-        // calculating SSD
-        float diff = data[i][j] - targetVector[j];
-        temp += diff * diff;
-      }
-      // taking square root
-      float dist = std::sqrt(temp);
-
-      std::string current_label = labels[i];
-      image_ranks.push_back(std::make_pair(dist, current_label));
-    }
-
+    image_ranks = calculate_euclidean_distances(labels,data,targetVector);
+    // image_ranks = calculate_scaled_euclidean_distances(labels,data,targetVector);
     // sorting the vector pair in ascending order of the float values
     sort(image_ranks.begin(), image_ranks.end());
 
-    std::cout<<image_ranks[1].second<<std::endl;
-    std::cout<<image_ranks[2].second<<std::endl;
-    std::cout<<image_ranks[3].second<<std::endl;
+    std::cout<<image_ranks[0].second<<","<<image_ranks[0].first<<std::endl;
+    std::cout<<image_ranks[1].second<<","<<image_ranks[1].first<<std::endl;
+    std::cout<<image_ranks[2].second<<","<<image_ranks[2].first<<std::endl;
     // Free allocated memory in the filenames vector
     for (char *fname : labels)
     {
