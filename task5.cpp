@@ -47,7 +47,12 @@ int append_image_data_csv(char *csv_file_name, std::string object_name, std::vec
 }
 
 int main() {
-    cv::VideoCapture cap("/home/ronak/Downloads/objects.mp4");
+    // cv::VideoCapture cap("/home/ronak/Downloads/objects.mp4");
+    // if (!cap.isOpened()) {
+    //     std::cerr << "Error: Unable to open video device" << std::endl;
+    //     return -1;
+    // }
+    cv::VideoCapture cap(0);
     if (!cap.isOpened()) {
         std::cerr << "Error: Unable to open video device" << std::endl;
         return -1;
