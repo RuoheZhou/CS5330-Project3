@@ -1,3 +1,10 @@
+/**
+ * @file task5.cpp
+ * @author Ronak Bhanushali and Ruohe Zhou
+ * @brief Task 5
+ * @date 2024-02-26
+ * 
+ */
 #include <opencv2/opencv.hpp>
 #include <iostream>
 #include <fstream>
@@ -47,11 +54,7 @@ int append_image_data_csv(char *csv_file_name, std::string object_name, std::vec
 }
 
 int main() {
-    // cv::VideoCapture cap("/home/ronak/Downloads/objects.mp4");
-    // if (!cap.isOpened()) {
-    //     std::cerr << "Error: Unable to open video device" << std::endl;
-    //     return -1;
-    // }
+
     cv::VideoCapture cap(0);
     if (!cap.isOpened()) {
         std::cerr << "Error: Unable to open video device" << std::endl;
@@ -64,7 +67,6 @@ int main() {
         while (true) {
             cap >> frame;
             if (frame.empty()) break;
-            cv::resize(frame, frame, cv::Size(600, 480));
 
             thresholding(frame, thresholded, 100);
             dilation(thresholded, dilated, 5, 8);

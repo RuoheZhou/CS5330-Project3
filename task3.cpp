@@ -1,3 +1,11 @@
+/**
+ * @file task3.cpp
+ * @author Ronak Bhanushali and Ruohe Zhou
+ * @brief Task 3
+ * @date 2024-02-26
+ * 
+ */
+
 #include <opencv2/opencv.hpp>
 #include <iostream>
 #include <vector>

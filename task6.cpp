@@ -1,4 +1,10 @@
-
+/**
+ * @file task6.cpp
+ * @author Ronak Bhanushali and Ruohe Zhou
+ * @brief Task 6
+ * @date 2024-02-26
+ * 
+ */
 #include <opencv2/opencv.hpp>
 #include <iostream>
 #include <vector>
@@ -178,7 +184,6 @@ std::vector<std::pair<float, std::string>> calculate_scaled_euclidean_distances(
 
         float scaled_diff = (new_value[i] - mean) / std_dev;
 
-        // float scaled_diff = (normalized_new_value - 0.0f) / std_dev;
         float distance = sqrt(scaled_diff * scaled_diff);
 
         scaled_distances.push_back(std::make_pair(distance, labels[i]));
@@ -250,7 +255,7 @@ int compareFeatures(std::vector<float> targetVector, char* csvFileName)
 
 
 int main() {
-    cv::VideoCapture cap("/home/ronak/Downloads/objects.mp4");
+    cv::VideoCapture cap(0);
     if (!cap.isOpened()) {
         std::cerr << "Error: Unable to open video device" << std::endl;
         return -1;
@@ -265,7 +270,6 @@ int main() {
     while (true) {
         cap >> frame;
         if (frame.empty()) break;
-        cv::resize(frame, frame, cv::Size(600, 480));
         thresholding(frame, thresholded, 100);
         dilation(thresholded, dilated, 5, 8);
         erosion(dilated, eroded, 5, 4);

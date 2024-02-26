@@ -1,3 +1,10 @@
+/**
+ * @file task1_and_2.cpp
+ * @author Ronak Bhanushali and Ruohe Zhou
+ * @brief Task 1 and 2
+ * @date 2024-02-26
+ * 
+ */
 #include <opencv2/opencv.hpp>
 #include "filters.hpp"
 
