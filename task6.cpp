@@ -276,7 +276,7 @@ int main() {
         cv::Mat labels = segmentObjects(eroded, segmented, 500, prevRegions);
 
         char key = static_cast<char>(cv::waitKey(1));
-        if (key == 'N' || key == 'n')
+        if (key == 'i')
         {
             for (const auto &reg : prevRegions)
             {

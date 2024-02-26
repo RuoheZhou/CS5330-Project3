@@ -25,7 +25,6 @@ int main(int argc, char *argv[]) {
 
     for (;;) {
         *capdev >> frame; // Get a new frame from the camera
-
         if (frame.empty()) {
             printf("Frame is empty\n");
             break;
@@ -43,7 +42,7 @@ int main(int argc, char *argv[]) {
         cv::imshow("Cleaned Video", eroded_img);
 
         // Check for key press
-        char key = cv::waitKey(17);
+        char key = cv::waitKey(10);
         if (key == 'q') {
             break; // Quit if 'q' is pressed
         }

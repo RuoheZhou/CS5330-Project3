@@ -32,7 +32,7 @@ int main() {
         if (frame.empty()) break;
 
         // Thresholding to separate object from background
-        thresholding(frame, thresholded, 150);
+        thresholding(frame, thresholded, 100);
         dilation(thresholded,dilated,5,8);
         erosion(dilated,eroded,5,4);
 

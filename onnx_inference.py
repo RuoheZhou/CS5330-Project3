@@ -38,7 +38,7 @@ def save_query_vectors():
 
     # Infer from ONNX
     data = input_tensors.cpu().numpy()
-    ort_session = ort.InferenceSession("/home/ronak/Downloads/siamese_net_market_20.onnx")
+    ort_session = ort.InferenceSession("/home/ronak/cs5330/project_3/rouhe/mobilenetv3_modified.onnx")
     vector_onnx = ort_session.run(None, {"input": data})
 
     numpy_vector_onnx = np.asarray(vector_onnx).squeeze()[:num_input_images]
